@@ -19,6 +19,8 @@ import com.facebook.presto.orc.writer.StreamLayoutFactory.ColumnSizeLayoutFactor
 import com.google.common.collect.ImmutableSet;
 import io.airlift.units.DataSize;
 
+import javax.swing.text.html.Option;
+
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -64,6 +66,7 @@ public class OrcWriterOptions
     private final boolean ignoreDictionaryRowGroupSizes;
     private final Optional<DwrfStripeCacheOptions> dwrfWriterOptions;
     private final int preserveDirectEncodingStripeCount;
+    private final Optional<DwrfStreamReorderingConfig> dwrfStreamReorderingConfig;
 
     /**
      * Contains indexes of columns (not nodes!) for which writer should use flattened encoding, e.g. flat maps.
@@ -87,7 +90,8 @@ public class OrcWriterOptions
             Optional<DwrfStripeCacheOptions> dwrfWriterOptions,
             boolean ignoreDictionaryRowGroupSizes,
             int preserveDirectEncodingStripeCount,
-            Set<Integer> flattenedColumns)
+            Set<Integer> flattenedColumns,
+            Optional<DwrfStreamReorderingConfig> dwrfStreamReorderingConfig)
     {
         requireNonNull(flushPolicy, "flushPolicy is null");
         checkArgument(rowGroupMaxRowCount >= 1, "rowGroupMaxRowCount must be at least 1");
@@ -100,6 +104,7 @@ public class OrcWriterOptions
         requireNonNull(streamLayoutFactory, "streamLayoutFactory is null");
         requireNonNull(dwrfWriterOptions, "dwrfWriterOptions is null");
         requireNonNull(flattenedColumns, "flattenedColumns is null");
+        requireNonNull(dwrfStreamReorderingConfig, "dwrfStreamReorderingConfig is null");
 
         this.flushPolicy = flushPolicy;
         this.rowGroupMaxRowCount = rowGroupMaxRowCount;
@@ -118,6 +123,7 @@ public class OrcWriterOptions
         this.ignoreDictionaryRowGroupSizes = ignoreDictionaryRowGroupSizes;
         this.preserveDirectEncodingStripeCount = preserveDirectEncodingStripeCount;
         this.flattenedColumns = flattenedColumns;
+        this.dwrfStreamReorderingConfig = dwrfStreamReorderingConfig;
     }
 
     public OrcWriterFlushPolicy getFlushPolicy()
@@ -205,6 +211,8 @@ public class OrcWriterOptions
         return flattenedColumns;
     }
 
+    public Optional<DwrfStreamReorderingConfig> getDwrfStreamReorderingConfig() {return dwrfStreamReorderingConfig;}
+
     @Override
     public String toString()
     {
@@ -226,6 +234,7 @@ public class OrcWriterOptions
                 .add("ignoreDictionaryRowGroupSizes", ignoreDictionaryRowGroupSizes)
                 .add("preserveDirectEncodingStripeCount", preserveDirectEncodingStripeCount)
                 .add("flattenedColumns", flattenedColumns)
+                .add("dwrfStreamReorderingConfig", dwrfStreamReorderingConfig)
                 .toString();
     }
 
@@ -260,6 +269,7 @@ public class OrcWriterOptions
         private boolean ignoreDictionaryRowGroupSizes;
         private int preserveDirectEncodingStripeCount = DEFAULT_PRESERVE_DIRECT_ENCODING_STRIPE_COUNT;
         private Set<Integer> flattenedColumns = ImmutableSet.of();
+        private Optional<DwrfStreamReorderingConfig> dwrfStreamReorderingConfig = Optional.empty();
 
         public Builder withFlushPolicy(OrcWriterFlushPolicy flushPolicy)
         {
@@ -377,6 +387,11 @@ public class OrcWriterOptions
             return this;
         }
 
+        public Builder withDwrfStreamReorderingConfig(Optional<DwrfStreamReorderingConfig> config) {
+            this.dwrfStreamReorderingConfig =  requireNonNull(config, "DwrfStreamReorderingConfig is null");
+            return this;
+        }
+
         public OrcWriterOptions build()
         {
             Optional<DwrfStripeCacheOptions> dwrfWriterOptions;
@@ -404,7 +419,8 @@ public class OrcWriterOptions
                     dwrfWriterOptions,
                     ignoreDictionaryRowGroupSizes,
                     preserveDirectEncodingStripeCount,
-                    flattenedColumns);
+                    flattenedColumns,
+                    dwrfStreamReorderingConfig);
         }
     }
 }

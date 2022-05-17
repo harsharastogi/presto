@@ -14,13 +14,16 @@
 package com.facebook.presto.orc;
 
 import com.facebook.presto.orc.metadata.DwrfStripeCacheMode;
+import com.facebook.presto.orc.proto.DwrfProto;
 import com.facebook.presto.orc.writer.StreamLayoutFactory;
 import com.facebook.presto.orc.writer.StreamLayoutFactory.ColumnSizeLayoutFactory;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.airlift.units.DataSize;
 import org.testng.annotations.Test;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 
@@ -62,8 +65,8 @@ public class TestOrcWriterOptions
     public void tesDefaultValues()
     {
         OrcWriterOptions options = OrcWriterOptions.builder().build();
-
         assertEquals(ImmutableSet.of(), options.getFlattenedColumns());
+        assertEquals(Optional.empty(), options.getDwrfStreamReorderingConfig());
     }
 
     @Test
@@ -86,6 +89,10 @@ public class TestOrcWriterOptions
         boolean stringDictionaryEncodingEnabled = false;
         int preserveDirectEncodingStripeCount = 10;
 
+        List<DwrfProto.KeyInfo> keyOrder = ImmutableList.of(DwrfProto.KeyInfo.newBuilder().setIntKey(1).build(),
+                DwrfProto.KeyInfo.newBuilder().setIntKey(2).build());
+        Optional<DwrfStreamReorderingConfig> dwrfStreamReorderingConfig = Optional.of(new DwrfStreamReorderingConfig(ImmutableMap.of(1, keyOrder)));
+
         OrcWriterOptions.Builder builder = OrcWriterOptions.builder()
                 .withFlushPolicy(DefaultOrcWriterFlushPolicy.builder()
                         .withStripeMinSize(stripeMinSize)
@@ -105,7 +112,8 @@ public class TestOrcWriterOptions
                 .withStringDictionarySortingEnabled(stringDictionarySortingEnabled)
                 .withStringDictionaryEncodingEnabled(stringDictionaryEncodingEnabled)
                 .withPreserveDirectEncodingStripeCount(preserveDirectEncodingStripeCount)
-                .withFlattenedColumns(ImmutableSet.of(4, 3));
+                .withFlattenedColumns(ImmutableSet.of(4, 3))
+                .withDwrfStreamReorderingConfig(dwrfStreamReorderingConfig);
 
         OrcWriterOptions options = builder.build();
 
@@ -127,6 +135,7 @@ public class TestOrcWriterOptions
         assertEquals(Optional.empty(), options.getDwrfStripeCacheOptions());
         assertEquals(preserveDirectEncodingStripeCount, options.getPreserveDirectEncodingStripeCount());
         assertEquals(ImmutableSet.of(4, 3), options.getFlattenedColumns());
+        assertEquals(options.getDwrfStreamReorderingConfig(), dwrfStreamReorderingConfig);
     }
 
     @Test
@@ -149,6 +158,10 @@ public class TestOrcWriterOptions
         boolean integerDictionaryEncodingEnabled = false;
         boolean stringDictionarySortingEnabled = true;
         int preserveDirectEncodingStripeCount = 0;
+        List<DwrfProto.KeyInfo> keyOrder = ImmutableList.of(DwrfProto.KeyInfo.newBuilder().setIntKey(1).build(),
+                DwrfProto.KeyInfo.newBuilder().setIntKey(2).build());
+        Optional<DwrfStreamReorderingConfig> dwrfStreamReorderingConfig = Optional.of(new DwrfStreamReorderingConfig(ImmutableMap.of(1, keyOrder)));
+
 
         OrcWriterOptions writerOptions = OrcWriterOptions.builder()
                 .withFlushPolicy(DefaultOrcWriterFlushPolicy.builder()
@@ -172,6 +185,7 @@ public class TestOrcWriterOptions
                 .withDwrfStripeCacheMode(dwrfStripeCacheMode)
                 .withPreserveDirectEncodingStripeCount(preserveDirectEncodingStripeCount)
                 .withFlattenedColumns(ImmutableSet.of(4))
+                .withDwrfStreamReorderingConfig(dwrfStreamReorderingConfig)
                 .build();
 
         String expectedString = "OrcWriterOptions{flushPolicy=DefaultOrcWriterFlushPolicy{stripeMaxRowCount=1100000, " +
@@ -181,7 +195,9 @@ public class TestOrcWriterOptions
                 "compressionLevel=OptionalInt[5], streamLayoutFactory=ColumnSizeLayoutFactory{}, integerDictionaryEncodingEnabled=false, " +
                 "stringDictionarySortingEnabled=true, stringDictionaryEncodingEnabled=true, " +
                 "dwrfWriterOptions=Optional[DwrfStripeCacheOptions{stripeCacheMode=INDEX_AND_FOOTER, stripeCacheMaxSize=4MB}], " +
-                "ignoreDictionaryRowGroupSizes=false, preserveDirectEncodingStripeCount=0, flattenedColumns=[4]}";
-        assertEquals(expectedString, writerOptions.toString());
+                "ignoreDictionaryRowGroupSizes=false, preserveDirectEncodingStripeCount=0, flattenedColumns=[4], " +
+                "dwrfStreamReorderingConfig=Optional[DwrfStreamReorderingConfig{colIdToStreamOrder={1=[intKey: 1\n" +
+                ", intKey: 2\n]}}]}";
+        assertEquals(writerOptions.toString(), expectedString);
     }
 }
